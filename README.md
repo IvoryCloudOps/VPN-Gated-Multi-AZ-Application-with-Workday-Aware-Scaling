@@ -1,19 +1,26 @@
 # 🚚Regional Distribution Operations Platform
-Status: Complete
+Status: Complete✅
+
 Environment status: AWS lab deployed and validated, then intentionally decommissioned to avoid recurring charges
+
 Focus: AWS · Terraform · Linux · Networking · Cloud Operations · Monitoring · CI/CD
+
 Designed and deployed an internal AWS distribution operations platform using private networking, an EC2 Auto Scaling Group, an internal Application Load Balancer, Multi-AZ RDS MySQL, and operational monitoring. The Flask application uses synthetic inventory, order, and shipment data; the engineering focus is the surrounding infrastructure and its reliability.
-Read the full engineering case study on Medium — Architecture decisions, selected Terraform code, deployment evidence, screenshots, and production trade-offs.
-1. Business Problem
+
+[Read the full engineering case study on Medium](https://medium.com/@ivorycloudops/building-a-private-multi-az-aws-operations-platform-for-regional-distribution-%EF%B8%8F-8dafcc20e7de?sharedUserId=ivorycloudops) — Architecture decisions, selected Terraform code, deployment evidence, screenshots, and production trade-offs. 
+
+# 1. Business Problem🏢
 A simulated regional distributor needed a private, reliable platform for warehouse inventory, orders, shipments, and reporting across multiple facilities. The solution needed network isolation, configurable workday scaling, visibility into unhealthy resources, and database backup capability. This project validates infrastructure behavior, not application user management or a specific throughput target.
-2. Architecture
+# 2. Architecture🏗️
+
+![Architecture Diagram](https://miro.medium.com/v2/resize:fit:1100/format:webp/1%2ArltYlTRizqiwnLED5U0w9A.png)
 
 - Private access: AWS Client VPN to an internal ALB; separate public, application, and database subnets across two Availability Zones.
 - Application tier: EC2 Auto Scaling Group bootstrapped from S3, with ALB health checks and scheduled/CPU-based scaling.
 - Data: Private Multi-AZ RDS MySQL with Secrets Manager-managed credentials; protected S3 object storage.
 - Operations: CloudWatch alarms, SNS, Systems Manager, Boto3 audit script, and a database recovery runbook.
 - Delivery: Terraform remote state and GitHub Actions OIDC-based format, validation, and plan checks.
-3. Key Decisions & Why
+# 3. Key Decisions & Why🤔
 - Private ALB + Client VPN: Keep an internal business application off the public internet.
 - Two AZs with two healthy ALB targets: Reduce reliance on a single application instance or availability zone.
 - Scheduled + CPU target-tracking scaling: Address predictable workday demand and unexpected load changes.
@@ -21,7 +28,7 @@ A simulated regional distributor needed a private, reliable platform for warehou
 - CloudWatch and Boto3 checks: Make infrastructure state observable and easier to troubleshoot.
 - Single NAT Gateway: Reduce lab costs while documenting the associated resiliency limitation.
 Validation highlights: The recorded deployment showed two healthy instances and two healthy ALB targets across separate AZs, an accessible internal application, RDS Multi-AZ enabled, seven-day automated backups, and configured CloudWatch alarms. See Medium for the evidence and limitations.
-4. What I'd Do Differently at Production Scale
+# 4. What I'd Do Differently at Production Scale📈
 - Add one NAT Gateway per AZ and require TLS for internal application traffic.
 - Verify failover, load-based scaling, restore procedures, and notification delivery with repeatable tests.
 - Enable VPN connection logging and tighten GitHub OIDC trust and IAM scopes.
