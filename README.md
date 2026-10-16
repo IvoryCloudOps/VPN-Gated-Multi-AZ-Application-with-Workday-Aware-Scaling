@@ -1,76 +1,36 @@
-# 🚚 Regional Distribution Operations Platform
+# 🚚Regional Distribution Operations Platform
+Status: Complete
+Environment status: AWS lab deployed and validated, then intentionally decommissioned to avoid recurring charges
+Focus: AWS · Terraform · Linux · Networking · Cloud Operations · Monitoring · CI/CD
+Designed and deployed an internal AWS distribution operations platform using private networking, an EC2 Auto Scaling Group, an internal Application Load Balancer, Multi-AZ RDS MySQL, and operational monitoring. The Flask application uses synthetic inventory, order, and shipment data; the engineering focus is the surrounding infrastructure and its reliability.
+Read the full engineering case study on Medium — Architecture decisions, selected Terraform code, deployment evidence, screenshots, and production trade-offs.
+1. Business Problem
+A simulated regional distributor needed a private, reliable platform for warehouse inventory, orders, shipments, and reporting across multiple facilities. The solution needed network isolation, configurable workday scaling, visibility into unhealthy resources, and database backup capability. This project validates infrastructure behavior, not application user management or a specific throughput target.
+2. Architecture
 
-**Status:** Completed
-
-**Environment status:** The AWS infrastructure was fully deployed, validated, and tested during development, then intentionally destroyed after project completion to prevent ongoing cloud costs. The repository preserves the Terraform, application code, automation, runbooks, and CI/CD configuration required to document and reproduce the environment.
-
-**Focus:** AWS • Terraform • Linux • Networking • Cloud Operations • CI/CD • Monitoring • Troubleshooting
-
-A hands-on cloud engineering portfolio project that simulates the AWS infrastructure behind a regional distribution company's internal order and inventory platform. The application itself is intentionally lightweight — the real focus is the infrastructure and operations work around it.
-
-Additional diagrams (network layout, scaling flow, security-group flow, alerting flow, CI/CD flow) live in [`docs/architecture.md`](docs/architecture.md).
-
----
-
-## 🏢 The Business Problem
-
-A regional distribution company operates several warehouses and distribution facilities in Georgia. Roughly 200–300 employees use an internal web application throughout the workday for inventory lookup, order processing, shipment-status tracking, warehouse operations, and basic internal reporting — with heavier demand during month-end processing, busy fulfillment periods, and seasonal spikes.
-
-The company wanted to migrate this system into AWS while improving reliability, security, scalability, visibility, and recoverability. The application is internal-only and should never be directly reachable from the public internet — remote employees connect through AWS Client VPN. The first design targets a single AWS Region across two Availability Zones.
-
----
-
-## 🏗️ Architecture
-
-![Regional Distribution Operations Platform Architecture](docphoto/regional-distribution-operations-platform.png)
-
-Supporting services: Terraform, IAM, Systems Manager, CloudWatch, SNS, S3, Secrets Manager, NAT Gateway, Internet Gateway, GitHub Actions.
-
----
-
-## 🧠 Key Decisions & Why
-
-### Access & Networking
-
-- **Client VPN instead of public exposure.** The app serves internal employees only — there's no business reason to expose it to the internet, so VPN + private subnets removes an entire attack surface up front.
-
-- **Two AZs, six subnets (public / app / db per AZ).** Enough for real multi-AZ failover practice without the cost and complexity of a third AZ, which wasn't necessary at this scale.
-
-- **Single NAT Gateway.** A deliberate cost tradeoff — outbound-only traffic (patching, dependencies) doesn't need per-AZ redundancy at this stage. Documented as a known resilience gap rather than an oversight.
-
-### Compute & Scaling
-
-- **EC2 in an Auto Scaling Group, not a single instance.** Private, no public IPs, spans both AZs — gives real hands-on ASG and Linux-operations practice (systemd, bootstrap, log investigation) instead of a single static box.
-
-- **Scheduled + dynamic scaling together.** Scheduled scaling covers known weekday demand; dynamic scaling (60% CPU target-tracking) covers unpredictable spikes. Using only one wouldn't reflect a realistic production traffic pattern.
-
-### Data Layer
-
-- **RDS Multi-AZ MySQL.** The workload's relational data (customers, orders, inventory, shipments) has genuine referential structure; Multi-AZ gives automatic failover without hand-rolling replication.
-
-- **Secrets Manager for DB credentials.** RDS-managed credential rotation means the application never touches a hardcoded credential in source code, Terraform, or EC2 config.
-
-### Security
-
-- **Systems Manager Session Manager instead of SSH.** No key pairs, no port 22, no inbound management rule at all — removes a classic lateral-movement vector entirely.
-
-- **Layered security groups** (Client VPN → ALB → App → DB). Each tier only accepts traffic from the tier directly in front of it; the database only ever talks to the application layer.
-
-### CI/CD
-
-- **GitHub Actions with AWS OIDC.** Temporary, scoped credentials for `plan` / `validate` instead of long-lived AWS access keys stored as GitHub secrets. `apply` is intentionally not automated yet — plan output gets a manual review while trust in the pipeline builds.
-
----
-
-## 🚀 What I'd Do Differently at Production Scale
-
-- **One NAT Gateway per AZ** instead of a single shared one — closes the resilience gap accepted here for cost savings.
-
-- **Three Availability Zones** instead of two, for a higher blast-radius tolerance.
-
-- **RDS read replica(s)** to offload reporting queries from the primary, especially given the "basic internal reporting" requirement.
-
-- **WAF in front of the ALB**, even though it's internal-only — defense in depth against a compromised VPN credential.
+- Private access: AWS Client VPN to an internal ALB; separate public, application, and database subnets across two Availability Zones.
+- Application tier: EC2 Auto Scaling Group bootstrapped from S3, with ALB health checks and scheduled/CPU-based scaling.
+- Data: Private Multi-AZ RDS MySQL with Secrets Manager-managed credentials; protected S3 object storage.
+- Operations: CloudWatch alarms, SNS, Systems Manager, Boto3 audit script, and a database recovery runbook.
+- Delivery: Terraform remote state and GitHub Actions OIDC-based format, validation, and plan checks.
+3. Key Decisions & Why
+- Private ALB + Client VPN: Keep an internal business application off the public internet.
+- Two AZs with two healthy ALB targets: Reduce reliance on a single application instance or availability zone.
+- Scheduled + CPU target-tracking scaling: Address predictable workday demand and unexpected load changes.
+- Multi-AZ MySQL + managed secrets: Protect relational business data and avoid credentials in source code.
+- CloudWatch and Boto3 checks: Make infrastructure state observable and easier to troubleshoot.
+- Single NAT Gateway: Reduce lab costs while documenting the associated resiliency limitation.
+Validation highlights: The recorded deployment showed two healthy instances and two healthy ALB targets across separate AZs, an accessible internal application, RDS Multi-AZ enabled, seven-day automated backups, and configured CloudWatch alarms. See Medium for the evidence and limitations.
+4. What I'd Do Differently at Production Scale
+- Add one NAT Gateway per AZ and require TLS for internal application traffic.
+- Verify failover, load-based scaling, restore procedures, and notification delivery with repeatable tests.
+- Enable VPN connection logging and tighten GitHub OIDC trust and IAM scopes.
+- Use CI/CD approval gates, production database deletion protection, and stronger retention controls.
+- Add application-level authentication and role-based access, integrated with corporate SSO; validate expected concurrency with load tests.
+- Expand application metrics, log aggregation, and documented recovery objectives.
+Source: [`terraform/`](terraform/), [`application/`](application/), [`scripts/`](scripts/)
+Runbook: [`docs/runbooks/rds_backup_recovery.md`](docs/runbooks/rds_backup_recovery.md)
+Detailed case study: Read on Medium
 
 - **Automated `terraform apply`** behind a manual approval gate, rather than a plan-only pipeline.
 
