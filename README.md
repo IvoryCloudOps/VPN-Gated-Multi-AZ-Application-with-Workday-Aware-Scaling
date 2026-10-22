@@ -1,4 +1,4 @@
-# 🚚Regional Distribution Operations Platform
+# VPN-Gated Multi-AZ Application with Workday-Aware Scaling🏢📈
 Status: Complete✅
 
 Environment status: AWS lab deployed and validated, then intentionally decommissioned to avoid recurring charges
