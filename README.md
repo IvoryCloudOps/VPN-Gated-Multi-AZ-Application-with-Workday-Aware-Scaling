@@ -13,7 +13,7 @@ Designed and deployed an internal AWS distribution operations platform using pri
 A simulated regional distributor needed a private, reliable platform for warehouse inventory, orders, shipments, and reporting across multiple facilities. The solution needed network isolation, configurable workday scaling, visibility into unhealthy resources, and database backup capability. This project validates infrastructure behavior, not application user management or a specific throughput target.
 # 2. Architecture🏗️
 
-![https://cdn-images-1.medium.com/max/1200/1*R9AtzY91INhs9X6-rqvz9w.png](https://miro.medium.com/v2/resize:fit:1100/format:webp/1*_SSaqEJzR_F9vOmqhqhzPg.png)
+![https://cdn-images-1.medium.com/max/1200/1*R9AtzY91INhs9X6-rqvz9w.png](https://cdn-images-1.medium.com/max/1200/1*XQEQM5QwwXoup8-hH2wxyA.png)
 
 - Private access: AWS Client VPN to an internal ALB; separate public, application, and database subnets across two Availability Zones.
 - Application tier: EC2 Auto Scaling Group bootstrapped from S3, with ALB health checks and scheduled/CPU-based scaling.
